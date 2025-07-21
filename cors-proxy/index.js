@@ -4,8 +4,8 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Suporte para JSON no corpo
-app.use(express.urlencoded({ extended: true })); // Suporte para form-data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.all("/", async (req, res) => {
     const url = req.query.url;
