@@ -4,21 +4,24 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // Suporte para JSON no corpo
+app.use(express.urlencoded({ extended: true })); // Suporte para form-data
 
-app.get("/", async (req, res) => {
+app.all("/", async (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send("Missing url query parameter");
 
     try {
-        const response = await axios.get(url, {
-            responseType: "arraybuffer", // <- necessário para binários
+        const response = await axios({
+            method: req.method,
+            url,
+            headers: req.headers,
+            data: req.body,
+            responseType: "arraybuffer",
         });
 
-        // Define o content-type da resposta original (por ex: image/jpeg)
         res.set("Content-Type", response.headers["content-type"]);
-
-        // Retorna o corpo binário da imagem
-        res.end(response.data, "binary");
+        res.status(response.status).send(response.data);
     } catch (error) {
         res.status(500).send("Error in proxying request: " + error.message);
     }
