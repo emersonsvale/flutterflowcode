@@ -1,30 +1,49 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-
 const app = express();
+
 app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.all("/", async (req, res) => {
-    const url = req.query.url;
-    if (!url) return res.status(400).send("Missing url query parameter");
+  const url = req.query.url;
+  if (!url) return res.status(400).send("Missing url query parameter");
 
-    try {
-        const response = await axios.get(url, {
-            responseType: "arraybuffer", // <- necessário para binários
-        });
+  try {
+    const axiosConfig = {
+      method: req.method,
+      url,
+      headers: {
+        ...req.headers,
+        host: new URL(url).host,
+      },
+      responseType: req.method === "GET" ? "arraybuffer" : "json", // binário só para GET
+      data: req.method !== "GET" ? req.body : undefined,
+    };
 
-        // Define o content-type da resposta original (por ex: image/jpeg)
-        res.set("Content-Type", response.headers["content-type"]);
+    const response = await axios(axiosConfig);
 
-        // Retorna o corpo binário da imagem
-        res.end(response.data, "binary");
-    } catch (error) {
-        res.status(500).send("Error in proxying request: " + error.message);
+    // Define Content-Type correto
+    res.set("Content-Type", response.headers["content-type"] || "application/octet-stream");
+    res.status(response.status);
+
+    // Responde binário (imagem, etc) ou JSON, dependendo do método
+    if (req.method === "GET") {
+      res.end(response.data, "binary");
+    } else {
+      res.json(response.data);
     }
+  } catch (error) {
+    console.error("Erro no proxy:", error.message);
+    const status = error.response?.status || 500;
+    const message = error.response?.data || error.message;
+    res.status(status).send("Erro no proxy: " + JSON.stringify(message));
+  }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`CORS proxy running on port ${PORT}`);
+  console.log(`🟢 Proxy rodando na porta ${PORT}`);
 });
