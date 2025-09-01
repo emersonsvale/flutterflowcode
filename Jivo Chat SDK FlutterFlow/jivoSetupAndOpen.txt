@@ -1,0 +1,65 @@
+Custom Action jivoSetupAndOpen
+
+channelId - String
+userToken - String
+name - String
+email - String
+phone - String
+brief - String
+
+Abre o chat do Jivo no app, configurando (opcionalmente) dados do usuário. Assinatura com parâmetros posicionais (como você enviou).
+
+// Automatic FlutterFlow imports
+import '/backend/schema/structs/index.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import '/custom_code/actions/index.dart'; // Imports other custom actions
+import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'package:flutter/material.dart';
+// Begin custom action code
+// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
+
+// Import do SDK do Jivo com alias para evitar conflitos de nomes.
+import 'package:jivosdk_plugin/bridge.dart';
+
+/// Abre o chat do Jivo no app, configurando (opcionalmente) dados do usuário.
+/// Assinatura com parâmetros posicionais (como você enviou).
+Future jivoSetupAndOpen(
+  String channelId,
+  String? userToken,
+  String? name,
+  String? email,
+  String? phone,
+  String? brief,
+) async {
+  final id = (channelId ?? '').trim();
+  if (id.isEmpty) {
+    throw Exception('Jivo channelId vazio. Configure o Mobile SDK channelId.');
+  }
+  try {
+    // Identifica o contato (opcional)
+    if ((name ?? '').isNotEmpty ||
+        (email ?? '').isNotEmpty ||
+        (phone ?? '').isNotEmpty ||
+        (brief ?? '').isNotEmpty) {
+      Jivo.session.setContactInfo(
+        name: name ?? '',
+        email: email ?? '',
+        phone: phone ?? '',
+        brief: brief ?? '',
+      );
+    }
+
+    // Inicializa sessão (com JWT se quiser autenticar o usuário)
+    Jivo.session.setup(
+      channelId: id,
+      userToken: (userToken ?? '').trim(),
+    );
+
+    // Abre a UI do chat
+    await Jivo.display.present();
+  } catch (e, st) {
+    debugPrint('openJivoChat error: $e\n$st');
+    rethrow;
+  }
+}
