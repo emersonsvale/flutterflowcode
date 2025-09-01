@@ -1,0 +1,90 @@
+Documentação - Jive SDK FlutterFlow
+
+Configure sua conta com firebase para utilização das push notification (obrigatório pela Jive SDK)
+
+1. Adicione as dependências:
+	firebase_messaging: ^15.1.5
+	jivosdk_plugin: ^1.0.0
+	stream_chat_flutter: ^9.16.0
+
+2. Configure a permissão de notificação no flutterflow
+
+3. Adicione a Custom Action 'jivoSetupAndOpen' no FlutterFlow e configure seus dados corretamente.
+
+4. Ao chamar a Custom Action 'jivoSetupAndOpen', solicite a permissão de notificação
+
+5. baixe o código no seu app.
+
+6. No arquivo android/build.gradle adicione:
+
+	buildscript {
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+    dependencies {
+
+        classpath 'com.google.gms:google-services:4.3.14'
+    }
+}
+
+allprojects {
+    repositories {
+
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+}
+
+
+7. No arquivo android/app/build.gradle adicione:
+
+plugins {
+
+    id "dev.flutter.flutter-gradle-plugin"
+    id 'com.google.gms.google-services'
+}
+
+android {
+
+   buildFeatures {
+       dataBinding = true
+   }
+
+}
+
+dependencies {
+
+    api platform('com.google.firebase:firebase-bom:32.7.2')
+    api 'com.google.firebase:firebase-messaging'
+}
+
+9. No arquivo android/app/proguard-rules.pro adicione:
+
+# --- Jivo SDK + Data Binding ---
+-keep class com.jivosite.sdk.BR { *; }
+-keep class com.jivosite.sdk.databinding.** { *; }
+-keep class com.jivosite.sdk.** { *; }
+
+# Data Binding / ViewDataBinding (geral)
+-keep class androidx.databinding.** { *; }
+-keep class * extends androidx.databinding.ViewDataBinding { *; }
+-keepclassmembers class ** {
+    @androidx.databinding.* <methods>;
+}
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod
+-keepnames class **.BR
+
+# Firebase / Play Services
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+
+# (Opcional) Evitar remoção agressiva de classes referenciadas por reflection
+-keep class ** implements java.io.Serializable { *; }
+
+10. Verifique se o arquivo google-services.json está na pasta android/app
+
