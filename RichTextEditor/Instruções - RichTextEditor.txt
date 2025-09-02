@@ -1,0 +1,14 @@
+Instruções - RichTextEditor
+
+1. Crie um App State chamado: HTMLMessage - String
+
+2. Adicione as dependências:
+
+file_picker: ^8.0.3
+flex_color_picker: ^3.4.1
+flutter_inappwebview: ^6.0.0
+flutter_keyboard_visibility: ^6.0.0
+html_editor_enhanced: ^2.6.0
+numberpicker: ^2.1.2
+pointer_interceptor: ^0.10.1+1
+visibility_detector: ^0.4.0+2
