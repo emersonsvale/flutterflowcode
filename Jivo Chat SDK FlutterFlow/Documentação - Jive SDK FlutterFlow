@@ -13,9 +13,55 @@ Configure sua conta com firebase para utilização das push notification (obriga
 
 4. Ao chamar a Custom Action 'jivoSetupAndOpen', solicite a permissão de notificação
 
-5. baixe o código no seu app.
+5. No custom code/Configuration Files/android/proguard-rules.pro adicione:
 
-6. No arquivo android/build.gradle adicione:
+# --- Jivo SDK + Data Binding ---
+-keep class com.jivosite.sdk.BR { *; }
+-keep class com.jivosite.sdk.databinding.** { *; }
+-keep class com.jivosite.sdk.** { *; }
+
+# Data Binding / ViewDataBinding (geral)
+-keep class androidx.databinding.** { *; }
+-keep class * extends androidx.databinding.ViewDataBinding { *; }
+-keepclassmembers class ** {
+    @androidx.databinding.* <methods>;
+}
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod
+-keepnames class **.BR
+
+# Firebase / Play Services
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+
+# (Opcional) Evitar remoção agressiva de classes referenciadas por reflection
+-keep class ** implements java.io.Serializable { *; }
+
+6. No custom code/Configuration Files/android/build.gradle adicione:
+
+plugins {
+
+    id "dev.flutter.flutter-gradle-plugin"
+    id 'com.google.gms.google-services'
+}
+
+android {
+
+   buildFeatures {
+       dataBinding = true
+   }
+
+}
+
+dependencies {
+
+    api platform('com.google.firebase:firebase-bom:32.7.2')
+    api 'com.google.firebase:firebase-messaging'
+}
+
+7. Baixe o arquivo do seu app
+
+8. No arquivo android/app/build.gradle adicione:
 
 	buildscript {
 
@@ -40,51 +86,7 @@ allprojects {
 }
 
 
-7. No arquivo android/app/build.gradle adicione:
 
-plugins {
+9. Verifique se o arquivo google-services.json está na pasta android/app
 
-    id "dev.flutter.flutter-gradle-plugin"
-    id 'com.google.gms.google-services'
-}
-
-android {
-
-   buildFeatures {
-       dataBinding = true
-   }
-
-}
-
-dependencies {
-
-    api platform('com.google.firebase:firebase-bom:32.7.2')
-    api 'com.google.firebase:firebase-messaging'
-}
-
-9. No arquivo android/app/proguard-rules.pro adicione:
-
-# --- Jivo SDK + Data Binding ---
--keep class com.jivosite.sdk.BR { *; }
--keep class com.jivosite.sdk.databinding.** { *; }
--keep class com.jivosite.sdk.** { *; }
-
-# Data Binding / ViewDataBinding (geral)
--keep class androidx.databinding.** { *; }
--keep class * extends androidx.databinding.ViewDataBinding { *; }
--keepclassmembers class ** {
-    @androidx.databinding.* <methods>;
-}
--keepattributes *Annotation*, InnerClasses, EnclosingMethod
--keepnames class **.BR
-
-# Firebase / Play Services
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.firebase.**
-
-# (Opcional) Evitar remoção agressiva de classes referenciadas por reflection
--keep class ** implements java.io.Serializable { *; }
-
-10. Verifique se o arquivo google-services.json está na pasta android/app
-
+10. exporte seu apk flutter build apk
