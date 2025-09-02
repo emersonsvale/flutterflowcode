@@ -1,0 +1,1 @@
+Esta action serve para pegar o Token do user
