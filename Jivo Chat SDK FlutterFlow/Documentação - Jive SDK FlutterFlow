@@ -153,16 +153,20 @@ dependencies {
 
 7. No arquivo android/AndroidManifest.xml adicione:
 
-  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-  <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
-  <application
-    android:label="infectocast-app"
-    tools:replace="android:label"
-    android:icon="@mipmap/ic_launcher"
-    android:requestLegacyExternalStorage="true"
-  >
+<!-- ==== INÍCIO: PERMISSÕES SUGERIDAS ==== -->
+<!-- Notificações (Android 13+) -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+<!-- Mídia (Android 13+) se o chat permitir anexar -->
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+<uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+<!-- Compatibilidade para Android <= 12 quando anexar arquivos -->
+<uses-permission
+    android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="32" />
+<!-- ==== FIM: PERMISSÕES SUGERIDAS ==== -->
+
 8. Verifique se o arquivo google-services.json está na pasta android/app
 
 9. exporte seu apk flutter build apk
