@@ -41,6 +41,13 @@ Configure sua conta com firebase para utilização das push notification (obriga
 
 6. No custom code/Configuration Files/android/build.gradle adicione:
 
+plugins {
+   id "com.android.application"
+   id "kotlin-android"
+   id "dev.flutter.flutter-gradle-plugin"
+   id "com.google.gms.google-services"  // Google Services plugin
+}
+
 /* ==== JITPACK REPOSITORY ==== */
 repositories {
     google()
@@ -49,7 +56,73 @@ repositories {
 }
 /* ==== FIM JITPACK REPOSITORY ==== */
 
--------------------------------------------
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace "com.mycompany.infectocastapp"
+    compileSdkVersion 35
+
+    buildFeatures {
+        dataBinding = true
+    }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+        checkReleaseBuilds false
+    }
+
+    defaultConfig {
+        applicationId "com.mycompany.infectocastapp"
+        minSdkVersion 23
+        targetSdkVersion 35
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+        }
+    }
 
     /* ==== ÚNICO buildTypes (minify OFF só para testar o crash no device) ==== */
     buildTypes {
@@ -64,6 +137,17 @@ repositories {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0"
+    api platform('com.google.firebase:firebase-bom:32.7.2')
+    api 'com.google.firebase:firebase-messaging'
 }
 
 
