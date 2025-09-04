@@ -15,78 +15,70 @@ Configure sua conta com firebase para utilização das push notification (obriga
 
 5. No custom code/Configuration Files/android/proguard-rules.pro adicione:
 
-# --- Jivo SDK + Data Binding ---
--keep class com.jivosite.sdk.BR { *; }
--keep class com.jivosite.sdk.databinding.** { *; }
--keep class com.jivosite.sdk.** { *; }
+# ==== Jivo SDK & dependências ====
+-keep class com.jivosite.** { *; }
+-dontwarn com.jivosite.**
 
-# Data Binding / ViewDataBinding (geral)
--keep class androidx.databinding.** { *; }
--keep class * extends androidx.databinding.ViewDataBinding { *; }
--keepclassmembers class ** {
-    @androidx.databinding.* <methods>;
-}
--keepattributes *Annotation*, InnerClasses, EnclosingMethod
--keepnames class **.BR
+# PhotoView (trazido pelo Jivo)
+-keep class com.github.chrisbanes.photoview.** { *; }
+-dontwarn com.github.chrisbanes.photoview.**
 
-# Firebase / Play Services
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.firebase.**
+# OkHttp/Okio/Retrofit (comuns em SDKs)
+-keep class okhttp3.** { *; }
+-dontwarn okhttp3.**
+-keep class okio.** { *; }
+-dontwarn okio.**
+-keep class retrofit2.** { *; }
+-dontwarn retrofit2.**
 
-# (Opcional) Evitar remoção agressiva de classes referenciadas por reflection
--keep class ** implements java.io.Serializable { *; }
+# AndroidX comuns (lifecycle/core via reflexão)
+-keep class androidx.lifecycle.** { *; }
+-keep class androidx.core.** { *; }
+-keep class androidx.fragment.app.** { *; }
+
+# Anotações/reflexão
+-keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature
 
 6. No custom code/Configuration Files/android/build.gradle adicione:
 
-plugins {
-
-    id "dev.flutter.flutter-gradle-plugin"
-    id 'com.google.gms.google-services'
+/* ==== JITPACK REPOSITORY ==== */
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
+/* ==== FIM JITPACK REPOSITORY ==== */
 
-android {
+-------------------------------------------
 
-   buildFeatures {
-       dataBinding = true
-   }
-
-}
-
-dependencies {
-
-    api platform('com.google.firebase:firebase-bom:32.7.2')
-    api 'com.google.firebase:firebase-messaging'
-}
-
-7. Baixe o arquivo do seu app
-
-8. No arquivo android/app/build.gradle adicione:
-
-	buildscript {
-
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://www.jitpack.io' }
-    }
-    dependencies {
-
-        classpath 'com.google.gms:google-services:4.3.14'
-    }
-}
-
-allprojects {
-    repositories {
-
-        google()
-        mavenCentral()
-        maven { url 'https://www.jitpack.io' }
+    /* ==== ÚNICO buildTypes (minify OFF só para testar o crash no device) ==== */
+    buildTypes {
+        debug {
+            minifyEnabled false
+            shrinkResources false
+        }
+        release {
+            minifyEnabled false   // teste: OFF
+            shrinkResources false // teste: OFF
+            signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
     }
 }
 
 
+7. No arquivo android/AndroidManifest.xml adicione:
 
-9. Verifique se o arquivo google-services.json está na pasta android/app
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+  <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+  <application
+    android:label="infectocast-app"
+    tools:replace="android:label"
+    android:icon="@mipmap/ic_launcher"
+    android:requestLegacyExternalStorage="true"
+  >
+8. Verifique se o arquivo google-services.json está na pasta android/app
 
-10. exporte seu apk flutter build apk
+9. exporte seu apk flutter build apk
