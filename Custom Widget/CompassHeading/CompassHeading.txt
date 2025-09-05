@@ -1,0 +1,362 @@
+// Automatic FlutterFlow imports
+import '/backend/schema/structs/index.dart';
+import '/backend/supabase/supabase.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import '/custom_code/widgets/index.dart'; // Imports other custom widgets
+import '/custom_code/actions/index.dart'; // Imports custom actions
+import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'package:flutter/material.dart';
+// Begin custom widget code
+// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
+
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+
+class CompassHeading extends StatefulWidget {
+  const CompassHeading({
+    super.key,
+    this.width,
+    this.height,
+    required this.size, // largura padrão da régua (se width nulo)
+    required this.showDegrees, // mostra bolha com graus
+    required this.smoothFactor, // 0.0 = sem suavização | 0.2~0.35 recomendado
+    this.tickMinorColor, // cor dos traços menores
+    this.tickMajorColor, // cor dos traços maiores
+    this.rulerBgColor, // cor de fundo da régua
+    this.pointerColor, // cor do ponteiro central (triângulo)
+    this.labelColor, // cor dos rótulos (N, NE, E...)
+  });
+
+  final double? width;
+  final double? height;
+  final double size;
+  final bool showDegrees;
+  final double smoothFactor;
+
+  // Customização de cores (opcionais)
+  final Color? tickMinorColor;
+  final Color? tickMajorColor;
+  final Color? rulerBgColor;
+  final Color? pointerColor;
+  final Color? labelColor;
+
+  @override
+  State<CompassHeading> createState() => _CompassHeadingState();
+}
+
+class _CompassHeadingState extends State<CompassHeading> {
+  double? _smoothed;
+
+  double _lerpAngle(double a, double b, double t) {
+    final delta = ((b - a + 540) % 360) - 180; // menor caminho 0↔360
+    return (a + delta * t + 360) % 360;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.width ?? widget.size;
+    final h = widget.height ?? 64.0; // altura padrão da régua
+
+    if (kIsWeb) {
+      return _notSupportedBox(
+        w,
+        h,
+        'Bússola nativa não é suportada no Web.\nTeste no Android/iOS.',
+        context,
+      );
+    }
+
+    return SizedBox(
+      width: w,
+      height: h,
+      child: StreamBuilder<CompassEvent?>(
+        stream: FlutterCompass.events,
+        builder: (context, snapshot) {
+          final heading = snapshot.data?.heading;
+          if (heading == null || heading.isNaN) {
+            return _notSupportedBox(
+              w,
+              h,
+              'Sem dados da bússola.\nPermissões e calibração (“8”).',
+              context,
+            );
+          }
+
+          _smoothed ??= heading;
+          final t = (widget.smoothFactor.clamp(0.0, 1.0) as double);
+          _smoothed = _lerpAngle(_smoothed!, heading, t);
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // RÉGUA
+              CustomPaint(
+                size: Size(w, h),
+                painter: _HeadingRulerPainter(
+                  headingDeg: _smoothed!,
+                  // Quantos graus aparecem na largura (ajuste se quiser “zoom”):
+                  windowDegrees: 180,
+                  // Densidade das marcas:
+                  minorEvery: 2, // traço curtinho
+                  midEvery: 5, // traço médio
+                  majorEvery: 10, // traço longo
+                  hugeEvery: 30, // traço mais longo
+                  textStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: (widget.labelColor ??
+                            Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9)),
+                        fontWeight: FontWeight.w600,
+                      ),
+                  tickColorMinor: widget.tickMinorColor ??
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                  tickColorMajor: widget.tickMajorColor ??
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                  bgColor: widget.rulerBgColor ??
+                      Theme.of(context).colorScheme.surface.withOpacity(0.55),
+                ),
+              ),
+
+              // PONTEIRO FIXO NO CENTRO (triângulo)
+              Align(
+                alignment: Alignment.center,
+                child: CustomPaint(
+                  size: const Size(16, 10),
+                  painter: _CenterPointerPainter(
+                    color: widget.pointerColor ??
+                        Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+
+              // BOLHA COM GRAUS
+              if (widget.showDegrees)
+                Positioned(
+                  bottom: 6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${_smoothed!.toStringAsFixed(0)}°',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _notSupportedBox(
+      double w, double h, String msg, BuildContext context) {
+    return Container(
+      width: w,
+      height: h,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Text(
+        msg,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
+/// Desenha a régua horizontal com marcas e rótulos cardeais.
+class _HeadingRulerPainter extends CustomPainter {
+  _HeadingRulerPainter({
+    required this.headingDeg,
+    required this.windowDegrees,
+    required this.minorEvery,
+    required this.midEvery,
+    required this.majorEvery,
+    required this.hugeEvery,
+    required this.textStyle,
+    required this.tickColorMinor,
+    required this.tickColorMajor,
+    required this.bgColor,
+  });
+
+  final double headingDeg;
+  final int windowDegrees; // quantos graus aparecem na largura
+  final int minorEvery;
+  final int midEvery;
+  final int majorEvery;
+  final int hugeEvery;
+  final TextStyle? textStyle;
+  final Color tickColorMinor;
+  final Color tickColorMajor;
+  final Color bgColor;
+
+  String _labelFor(int deg360) {
+    switch (deg360) {
+      case 0:
+        return 'N';
+      case 45:
+        return 'NE';
+      case 90:
+        return 'E';
+      case 135:
+        return 'SE';
+      case 180:
+        return 'S';
+      case 225:
+        return 'SW';
+      case 270:
+        return 'W';
+      case 315:
+        return 'NW';
+      default:
+        return '';
+    }
+  }
+
+  int _norm(int d) {
+    var x = d % 360;
+    if (x < 0) x += 360;
+    return x;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+
+    // Fundo translúcido
+    final bg = Paint()..color = bgColor;
+    final rRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, w, h),
+      const Radius.circular(10),
+    );
+    canvas.drawRRect(rRect, bg);
+
+    // Escala: pixels por grau para caber windowDegrees na largura
+    final pxPerDeg = w / windowDegrees;
+
+    // Faixa de graus a desenhar
+    final startDegF = headingDeg - (w / (2 * pxPerDeg)) - 2;
+    final endDegF = headingDeg + (w / (2 * pxPerDeg)) + 2;
+
+    final minorPaint = Paint()
+      ..strokeWidth = 1
+      ..color = tickColorMinor;
+    final majorPaint = Paint()
+      ..strokeWidth = 2
+      ..color = tickColorMajor;
+
+    // Alturas dos traços
+    final yBottom = h - 1;
+    final lenMinor = h * 0.25;
+    final lenMid = h * 0.40;
+    final lenMajor = h * 0.60;
+    final lenHuge = h * 0.80;
+
+    // Desenha ticks e rótulos
+    for (int deg = startDegF.floor(); deg <= endDegF.ceil(); deg++) {
+      final x = centerX + (deg - headingDeg) * pxPerDeg;
+
+      // desenha somente se visível
+      if (x < -20 || x > w + 20) continue;
+
+      final d360 = _norm(deg);
+
+      final isHuge = d360 % hugeEvery == 0;
+      final isMajor = d360 % majorEvery == 0;
+      final isMid = d360 % midEvery == 0;
+      final isMinor = d360 % minorEvery == 0;
+
+      double len = lenMinor;
+      Paint p = minorPaint;
+
+      if (isHuge) {
+        len = lenHuge;
+        p = majorPaint;
+      } else if (isMajor) {
+        len = lenMajor;
+        p = majorPaint;
+      } else if (isMid) {
+        len = lenMid;
+      } else if (!isMinor) {
+        continue; // só desenha nos intervalos definidos
+      }
+
+      // Linha do tick (de baixo pra cima)
+      canvas.drawLine(Offset(x, yBottom), Offset(x, yBottom - len), p);
+
+      // Rótulos cardeais nos ângulos exatos (0,45,90,...)
+      final label = _labelFor(d360);
+      if (label.isNotEmpty && textStyle != null) {
+        final tp = TextPainter(
+          text: TextSpan(text: label, style: textStyle),
+          textDirection: ui.TextDirection.ltr, // <- fix p/ FlutterFlow
+        )..layout();
+        // posiciona acima do tick grandão
+        tp.paint(
+          canvas,
+          Offset(x - tp.width / 2, yBottom - lenHuge - 4),
+        );
+      }
+    }
+
+    // Linha de base
+    canvas.drawLine(
+      Offset(0, yBottom),
+      Offset(w, yBottom),
+      minorPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _HeadingRulerPainter oldDelegate) {
+    return oldDelegate.headingDeg != headingDeg ||
+        oldDelegate.windowDegrees != windowDegrees;
+  }
+}
+
+/// Triângulo central (ponteiro fixo).
+class _CenterPointerPainter extends CustomPainter {
+  _CenterPointerPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, 0) // topo
+      ..lineTo(0, size.height)
+      ..lineTo(size.width, size.height)
+      ..close();
+
+    final paint = Paint()..color = color;
+    // pequena sombra para destacar
+    final shadow = Paint()
+      ..color = Colors.black.withOpacity(0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    canvas.drawPath(path, shadow);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

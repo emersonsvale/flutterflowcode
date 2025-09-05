@@ -1,0 +1,82 @@
+Esse FFDraggableSheet é um Bottom Sheet arrastável (tipo “drawer” que sobe da base da tela) feito em cima do DraggableScrollableSheet do Flutter, já preparado para uso dentro do FlutterFlow.
+
+O que ele faz
+
+Renderiza um painel que abre na parte de baixo e pode ser arrastado entre alturas mínima, inicial e máxima.
+
+Já vem com:
+
+Grabber (aquela barrinha cinza no topo) opcional.
+
+Cantos superiores arredondados e sombra.
+
+Scroll interno conectado ao controlador do DraggableScrollableSheet (requisito do próprio widget do Flutter).
+
+Principais props (todas do construtor)
+
+initialChildSize, minChildSize, maxChildSize → frações da altura da tela (0.0–1.0).
+O initialChildSize é “clampado” entre min e max pra evitar valores inválidos.
+
+backgroundColor → cor de fundo do sheet (padrão: Theme.of(context).canvasColor).
+
+radius → raio dos cantos superiores.
+
+showGrabber → mostra/oculta a barrinha de arraste.
+
+width → largura fixa opcional (útil na Web pra não ocupar 100%).
+
+height → existe só por compat; não é usada (o DraggableScrollableSheet trabalha por frações).
+
+content → Widget Function() que constrói o conteúdo interno.
+
+Como ele é montado por dentro
+
+Envolve tudo num DraggableScrollableSheet.
+
+O scrollController fornecido pelo builder é passado para um SingleChildScrollView interno.
+
+O conteúdo que você passa em content() é renderizado dentro desse SingleChildScrollView (com SafeArea(top: false)).
+
+Se width for definido, o sheet é centralizado com essa largura. Se não, ocupa a largura total.
+
+Cuidados práticos
+
+Como o widget já tem um SingleChildScrollView com o controller do sheet, evite colocar outro widget rolável (ListView, GridView, outro SingleChildScrollView) dentro do content.
+
+Se precisar de lista longa, o ideal seria adaptar o componente para injetar o mesmo scrollController na sua ListView em vez do SingleChildScrollView. Do jeito atual, conteúdo deve ser estático (ou com NeverScrollableScrollPhysics nos roláveis internos) pra não conflitar.
+
+height é intencionalmente ignorado — ajuste alturas via min/initial/max.
+
+Não usa snap (por compatibilidade), então o sheet não “encaixa” em pontos discretos: ele fica contínuo entre min e max.
+
+Exemplo de uso rápido
+FFDraggableSheet(
+  initialChildSize: 0.35,
+  minChildSize: 0.20,
+  maxChildSize: 0.90,
+  width: 560, // na Web, para um painel centralizado mais estreito
+  backgroundColor: const Color(0xFF1A1D1F),
+  radius: 16,
+  showGrabber: true,
+  content: () => Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Text('Filtros', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        SizedBox(height: 12),
+        // ...seu conteúdo “não rolável” aqui...
+      ],
+    ),
+  ),
+)
+
+Defina os parâmetros:
+
+initialChildSize - Double - Frações da altura da tela (0.0 a 1.0)
+minChildSize - Double - Frações da altura da tela (0.0 a 1.0)
+maxChildSize - Double- Frações da altura da tela (0.0 a 1.0)
+backgroundColor - Color
+radius - Double
+showGrabber - Bool
+content - Widget Builder

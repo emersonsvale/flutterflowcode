@@ -1,0 +1,64 @@
+Esse CompassHeading é um widget de bússola horizontal (estilo régua), feito com FlutterCompass. Ele mostra a direção atual em graus, com marcas e rótulos cardeais, e um ponteiro fixo no centro; quem se move é a régua conforme o heading muda.
+
+O que ele faz (em resumo)
+
+Escuta FlutterCompass.events (stream do heading em graus).
+
+Suaviza a rotação com angle-lerp que respeita o wrap 0↔360 (_lerpAngle) – evita saltos quando cruza 359°→0°.
+
+Renderiza uma régua horizontal via CustomPainter com:
+
+ticks de diferentes comprimentos (2°, 5°, 10°, 30°),
+
+rótulos N, NE, E, SE, S, SW, W, NW nos ângulos exatos,
+
+ponteiro triangular fixo no centro,
+
+bolha opcional exibindo os graus (showDegrees).
+
+Web não é suportado: mostra um card informativo (kIsWeb).
+
+Props importantes
+
+size → largura padrão (se width não vier).
+
+width/height → dimensões do widget (altura padrão 64).
+
+showDegrees → mostra a bolha com “XXX°”.
+
+smoothFactor → 0.0 sem suavização; ~0.2–0.35 fica agradável.
+
+Cores opcionais: tickMinorColor, tickMajorColor, rulerBgColor, pointerColor, labelColor.
+
+Detalhes de implementação relevantes
+
+O StreamBuilder recebe heading; se null/NaN, exibe fallback (“Sem dados da bússola. Permissões e calibração (‘8’).”).
+
+Primeiro heading inicializa _smoothed. A cada evento, aplica:
+
+final delta = ((b - a + 540) % 360) - 180; // menor caminho angular
+_smoothed = (a + delta * t + 360) % 360;
+
+
+O CustomPainter calcula pixels por grau para enquadrar windowDegrees = 180 na largura (mostra um “zoom” de 180° ao redor do centro).
+
+shouldRepaint só repinta quando headingDeg (ou windowDegrees) muda.
+
+Limitações e considerações
+
+Somente Android/iOS (sensores). Em alguns aparelhos é preciso calibrar fazendo o movimento em “8”.
+
+O plugin usa sensores do dispositivo; não força permissão de localização, mas pode variar por modelo/SO (vale validar no seu target).
+
+Se quiser menos eventos/repaints, dá pra throttlear a stream (ex.: debounceTime/sample) antes do StreamBuilder.
+
+Exemplo de uso
+CompassHeading(
+  size: 320,          // se não passar width
+  height: 72,
+  showDegrees: true,
+  smoothFactor: 0.28, // suavização
+  rulerBgColor: const Color(0x331A1D1F),
+  pointerColor: const Color(0xFF3DDC97),
+  labelColor: Colors.white,
+)
