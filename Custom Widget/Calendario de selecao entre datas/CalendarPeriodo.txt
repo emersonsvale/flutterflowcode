@@ -1,0 +1,432 @@
+// Automatic FlutterFlow imports
+import '/backend/schema/structs/index.dart';
+import '/backend/supabase/supabase.dart';
+import '/actions/actions.dart' as action_blocks;
+import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import '/custom_code/widgets/index.dart'; // Imports other custom widgets
+import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'package:flutter/material.dart';
+// Begin custom widget code
+// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
+
+import 'package:intl/intl.dart';
+
+class CalendarPeriodo extends StatefulWidget {
+  const CalendarPeriodo({
+    super.key,
+    this.width,
+    this.height,
+    this.saidas,
+  });
+
+  final double? width;
+  final double? height;
+  final Future Function(DateTime? dataInicio, DateTime? dataFim)? saidas;
+
+  @override
+  State<CalendarPeriodo> createState() => _CalendarPeriodoState();
+}
+
+class _CalendarPeriodoState extends State<CalendarPeriodo> {
+  DateTime _currentMonth = DateTime.now();
+  DateTime? _selectedStartDate;
+  DateTime? _selectedEndDate;
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
+
+  // Lista de anos para o dropdown
+  List<int> get _yearList {
+    int currentYear = DateTime.now().year;
+    int startYear = 2020;
+    int endYear = currentYear + 10;
+    List<int> years = [];
+    for (int i = startYear; i <= endYear; i++) {
+      years.add(i);
+    }
+    return years;
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
+  }
+
+  List<DateTime> get _daysInMonth {
+    final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final firstDayOfWeek = firstDay.weekday % 7; // 0 = Sunday
+    final daysInMonth = lastDay.day;
+
+    List<DateTime> days = [];
+
+    // Add days from previous month
+    final prevMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+    final prevMonthLastDay =
+        DateTime(prevMonth.year, prevMonth.month + 1, 0).day;
+    for (int i = firstDayOfWeek - 1; i >= 0; i--) {
+      days.add(DateTime(prevMonth.year, prevMonth.month, prevMonthLastDay - i));
+    }
+
+    // Add days from current month
+    for (int i = 1; i <= daysInMonth; i++) {
+      days.add(DateTime(_currentMonth.year, _currentMonth.month, i));
+    }
+
+    // Add days from next month to complete the grid
+    final remainingDays = 42 - days.length; // 6 weeks * 7 days
+    for (int i = 1; i <= remainingDays; i++) {
+      days.add(DateTime(_currentMonth.year, _currentMonth.month + 1, i));
+    }
+
+    return days;
+  }
+
+  bool _isInRange(DateTime date) {
+    if (_selectedStartDate == null || _selectedEndDate == null) return false;
+    return date
+            .isAfter(_selectedStartDate!.subtract(const Duration(days: 1))) &&
+        date.isBefore(_selectedEndDate!.add(const Duration(days: 1)));
+  }
+
+  bool _isStartDate(DateTime date) {
+    return _selectedStartDate != null &&
+        date.year == _selectedStartDate!.year &&
+        date.month == _selectedStartDate!.month &&
+        date.day == _selectedStartDate!.day;
+  }
+
+  bool _isEndDate(DateTime date) {
+    return _selectedEndDate != null &&
+        date.year == _selectedEndDate!.year &&
+        date.month == _selectedEndDate!.month &&
+        date.day == _selectedEndDate!.day;
+  }
+
+  bool _isCurrentMonth(DateTime date) {
+    return date.month == _currentMonth.month && date.year == _currentMonth.year;
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      // Navega para o mês da data clicada se for de outro mês
+      if (!_isCurrentMonth(date)) {
+        _currentMonth = DateTime(date.year, date.month);
+      }
+
+      // Lógica de seleção de período
+      if (_selectedStartDate == null ||
+          (_selectedStartDate != null && _selectedEndDate != null)) {
+        // Inicia nova seleção
+        _selectedStartDate = date;
+        _selectedEndDate = null;
+      } else if (_selectedStartDate != null && _selectedEndDate == null) {
+        // Completa a seleção
+        if (date.isBefore(_selectedStartDate!)) {
+          _selectedEndDate = _selectedStartDate;
+          _selectedStartDate = date;
+        } else {
+          _selectedEndDate = date;
+        }
+      }
+    });
+  }
+
+  void _goToToday() {
+    setState(() {
+      _currentMonth = DateTime.now();
+      _selectedStartDate = DateTime.now();
+      _selectedEndDate = null;
+    });
+  }
+
+  void _changeMonth(int? newMonth) {
+    if (newMonth != null) {
+      setState(() {
+        _currentMonth = DateTime(_currentMonth.year, newMonth);
+      });
+    }
+  }
+
+  void _changeYear(int? newYear) {
+    if (newYear != null) {
+      setState(() {
+        _currentMonth = DateTime(newYear, _currentMonth.month);
+      });
+    }
+  }
+
+  String _getDateRangeText() {
+    if (_selectedStartDate == null && _selectedEndDate == null) {
+      return '';
+    } else if (_selectedStartDate != null && _selectedEndDate == null) {
+      return _dateFormat.format(_selectedStartDate!);
+    } else if (_selectedStartDate != null && _selectedEndDate != null) {
+      return '${_dateFormat.format(_selectedStartDate!)} - ${_dateFormat.format(_selectedEndDate!)}';
+    }
+    return '';
+  }
+
+  Future<void> _confirmSelection() async {
+    if (_selectedStartDate != null && _selectedEndDate != null) {
+      if (widget.saidas != null) {
+        await widget.saidas!(_selectedStartDate, _selectedEndDate);
+      }
+    } else if (_selectedStartDate != null) {
+      // Se apenas a data inicial estiver selecionada, usa ela como início e fim
+      if (widget.saidas != null) {
+        await widget.saidas!(_selectedStartDate, _selectedStartDate);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    final weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+    return Container(
+      width: widget.width ?? 350,
+      height: widget.height ?? 420,
+      decoration: BoxDecoration(
+        color: theme.secondaryBackground,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with Dropdowns and "Hoje" button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Row contendo os dois Dropdowns (Mês e Ano)
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Dropdown Mês
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _currentMonth.month,
+                          icon: Icon(Icons.arrow_drop_down,
+                              size: 20, color: theme.primaryText),
+                          dropdownColor: theme.secondaryBackground,
+                          elevation: 2,
+                          style: TextStyle(
+                            color: theme.primaryText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          onChanged: _changeMonth,
+                          items: List.generate(12, (index) {
+                            int monthIndex = index + 1;
+                            String monthName = DateFormat('MMMM', 'pt_BR')
+                                .format(DateTime(2024, monthIndex, 1));
+                            return DropdownMenuItem<int>(
+                              value: monthIndex,
+                              child: Text(_capitalize(monthName)),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Dropdown Ano
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _yearList.contains(_currentMonth.year)
+                              ? _currentMonth.year
+                              : null,
+                          icon: Icon(Icons.arrow_drop_down,
+                              size: 20, color: theme.primaryText),
+                          dropdownColor: theme.secondaryBackground,
+                          elevation: 2,
+                          style: TextStyle(
+                            color: theme.primaryText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          onChanged: _changeYear,
+                          items: _yearList.map((int year) {
+                            return DropdownMenuItem<int>(
+                              value: year,
+                              child: Text(year.toString()),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // "Hoje" button
+                TextButton(
+                  onPressed: _goToToday,
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Hoje',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Week day headers
+            Row(
+              children: weekDays.map((day) {
+                return Expanded(
+                  child: Center(
+                    child: Text(
+                      day,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            // Calendar grid
+            Expanded(
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  childAspectRatio: 1,
+                ),
+                itemCount: _daysInMonth.length,
+                itemBuilder: (context, index) {
+                  final date = _daysInMonth[index];
+                  final isCurrentMonth = _isCurrentMonth(date);
+                  final isToday = _isToday(date);
+                  final isStart = _isStartDate(date);
+                  final isEnd = _isEndDate(date);
+                  final isInRange = _isInRange(date);
+
+                  return GestureDetector(
+                    onTap: () => _selectDate(date),
+                    child: Container(
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isStart || isEnd
+                            ? theme.primary.withOpacity(0.2)
+                            : isInRange
+                                ? theme.primary.withOpacity(0.1)
+                                : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: isStart || isEnd
+                            ? Border.all(
+                                color: theme.primary,
+                                width: 2,
+                              )
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isCurrentMonth
+                                ? (isStart || isEnd
+                                    ? theme.primary
+                                    : theme.primaryText)
+                                : theme.secondaryText.withOpacity(0.5),
+                            fontWeight: isStart || isEnd || isToday
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Date input and Select button
+            Row(
+              children: [
+                // Date input field
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.primaryBackground,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.alternate,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _getDateRangeText().isEmpty
+                          ? 'Selecione um período'
+                          : _getDateRangeText(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _getDateRangeText().isEmpty
+                            ? theme.secondaryText
+                            : theme.primaryText,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Select button
+                ElevatedButton(
+                  onPressed: (_selectedStartDate != null &&
+                              _selectedEndDate != null) ||
+                          _selectedStartDate != null
+                      ? _confirmSelection
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Selecionar',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
